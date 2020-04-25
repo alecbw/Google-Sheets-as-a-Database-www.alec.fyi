@@ -40,10 +40,10 @@ functions:
 
 resources:
   Resources:
-    gsheet-backup-bucket:
+    GSheetBackupBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: gsheet-backup-bucket-${env:AWS_ACCOUNT_ID}
+        BucketName: gsheet-backup-bucket-${env:AWS_ACCOUNT_ID}-1
         AccessControl: Private
         CorsConfiguration:
           CorsRules:
