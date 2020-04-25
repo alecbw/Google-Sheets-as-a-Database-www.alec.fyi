@@ -5,7 +5,7 @@ provider:
   name: aws
   runtime: python3.7
   stage: prod
-  region: us-west-2
+  region: us-west-1
   logRetentionInDays: 120
   versionFunctions: false
   memorySize: 1024
@@ -27,7 +27,7 @@ provider:
         - s3:ListBucket
         - s3:GetBucketLocation
       Resource:
-        - "arn:aws:s3:::bucket-you-made/*"
+        - arn:aws:s3:::gsheet-backup-bucket-${env:AWS_ACCOUNT_ID}/*
 
 functions:
   s3-sync:
@@ -36,3 +36,24 @@ functions:
       - schedule: cron(0 18 ? * SUN *) # Sun at 11 am PST (18 UTC -7 correction)
   gsheet-write:
     handler: gsheet_write_handler.lambda_handler
+
+
+resources:
+  Resources:
+    gsheet-backup-bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: gsheet-backup-bucket-${env:AWS_ACCOUNT_ID}
+        AccessControl: Private
+        CorsConfiguration:
+          CorsRules:
+          - AllowedMethods:
+            - GET
+            - PUT
+            - POST
+            - HEAD
+            AllowedOrigins:
+            - "*"
+            AllowedHeaders:
+            - "*"
+            MaxAge: 3000
