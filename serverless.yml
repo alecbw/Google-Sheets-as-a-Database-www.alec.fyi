@@ -1,0 +1,30 @@
+
+service: s3-sync-cron
+
+provider:
+  name: aws
+  runtime: python3.7
+  stage: prod
+  region: us-west-2
+  logRetentionInDays: 120
+  versionFunctions: false
+  memorySize: 1024
+  timeout: 10
+  tags:
+    deployment: serverless.com
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:GetObject
+        - s3:PutObject
+        - s3:ListBucket
+        - s3:GetBucketLocation
+      Resource:
+        - "arn:aws:s3:::bucket-you-made-for-this/*"
+
+functions:
+  s3-sync:
+    handler: s3_gsheets_sync_handler.lambda_handler
+    events:
+      - schedule: cron(0 18 ? * SUN *) # Sun at 11 am PST (18 UTC -7 correction)

@@ -1,5 +1,5 @@
 from utility.util import package_response, validate_params
-from utility.util_datastores import open_gsheet, get_gsheet_tab, get_gsheet_worksheet_names, create_gsheet_worksheet
+from utility.util_gspread import open_gsheet, get_gsheet_tab, create_gsheet_worksheet
 
 from itertools import chain, zip_longest
 import os
@@ -8,8 +8,9 @@ import logging
 from gspread.models import Cell
 import pandas as pd
 
+# Note: the .clear() (overwrite and combine) will freak people out if they are using it during
 
-##############################################
+############################################################################################
 
 
 def lambda_handler(event, context):
@@ -70,7 +71,7 @@ def lambda_handler(event, context):
 
 
 
-####################################################################################
+############################ Tab and DF helpers ###########################################
 
 
 def drop_empty_rows(df, df_type): # DATSTORES?
@@ -90,14 +91,15 @@ def deduplicate_df(df, column):
     df.reset_index(drop=True, inplace=True)
     return df
 
-####################################################################################
+######################## Main Operators ################################################
+
 
 def validate_gsheet_tab(params):
     input_df = pd.DataFrame(params["Data"])
     sh, worksheet_list = open_gsheet(params["Gsheet"])
 
-    if params["Tab"] in get_gsheet_worksheet_names(sh):
-        existing_lod, tab = get_gsheet_tab(sh, params["Tab"])
+    if params["Tab"] in worksheet_list:
+        tab, existing_lod = get_gsheet_tab(sh, params["Tab"])
         existing_df = pd.DataFrame(existing_lod)
     else:
         logging.info(f"Tab name not found. Making new tab: {params['Tab']}.")
@@ -143,6 +145,7 @@ def combine_and_deduplicate(input_df, existing_df, params):
     return merged_dfs
 
 
+######################## DF -> GSheet Conversion ################################################
 
 def _cellrepr(value, allow_formulas):
     """
@@ -239,3 +242,41 @@ def set_with_dataframe(worksheet,
     logging.debug("Cell update response: %s", resp)
 
 
+######################## Standard Lambda Helpers ################################################
+
+
+def validate_params(event, required_params, **kwargs):
+    event = standardize_event(event)
+    commom_required_params = list(set(event).intersection(required_params))
+    commom_optional_params = list(set(event).intersection(kwargs.get("optional_params", [])))
+
+    param_only_dict = {k: v for k, v in event.items() if k in required_params + kwargs.get("optional_params", [])}
+    logging.info(f"Total param dict: {param_only_dict}")
+    logging.info(f"Found optional params: {commom_optional_params}")
+
+    if commom_required_params != required_params:
+        missing_params = [x for x in required_params if x not in event]
+        return param_only_dict, missing_params
+
+    return param_only_dict, False
+
+
+def standardize_event(event):
+    if "queryStringParameters" in event:
+        event.update(event["queryStringParameters"])
+    elif "query" in event:
+        event.update(event["query"])
+
+    result_dict = {
+        k.title().strip().replace(" ", "_"):(False if v == "false" else v)
+        for (k, v) in event.items()
+    }
+    return result_dict
+
+
+def package_response(message, status_code, **kwargs):
+    return {
+        "statusCode": status_code if status_code else "200",
+        "body": json.dumps({"data": message}),
+        "headers": {"Content-Type": "application/json"},
+    }
