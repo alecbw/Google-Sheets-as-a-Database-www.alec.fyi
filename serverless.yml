@@ -16,15 +16,23 @@ provider:
   iamRoleStatements:
     - Effect: Allow
       Action:
+        - lambda:InvokeFunction
+        - lambda:InvokeAsync
+      Resource:
+        - "*"
+    - Effect: Allow
+      Action:
         - s3:GetObject
         - s3:PutObject
         - s3:ListBucket
         - s3:GetBucketLocation
       Resource:
-        - "arn:aws:s3:::bucket-you-made-for-this/*"
+        - "arn:aws:s3:::bucket-you-made/*"
 
 functions:
   s3-sync:
     handler: s3_gsheets_sync_handler.lambda_handler
     events:
       - schedule: cron(0 18 ? * SUN *) # Sun at 11 am PST (18 UTC -7 correction)
+  gsheet-write:
+    handler: gsheet_write_handler.lambda_handler
