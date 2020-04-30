@@ -1,4 +1,5 @@
-from util_gspread import open_gsheet, get_gsheet_tab, create_gsheet_worksheet
+from util.util import package_response, validate_params
+from util.util_gspread import open_gsheet, get_gsheet_tab, create_gsheet_worksheet
 
 from itertools import chain, zip_longest
 import os
@@ -240,43 +241,3 @@ def set_with_dataframe(worksheet,
 
     resp = worksheet.update_cells(cells_to_update, value_input_option='USER_ENTERED')
     logging.debug("Cell update response: %s", resp)
-
-
-######################## Standard Lambda Helpers ################################################
-
-
-def validate_params(event, required_params, **kwargs):
-    event = standardize_event(event)
-    commom_required_params = list(set(event).intersection(required_params))
-    commom_optional_params = list(set(event).intersection(kwargs.get("optional_params", [])))
-
-    param_only_dict = {k: v for k, v in event.items() if k in required_params + kwargs.get("optional_params", [])}
-    logging.info(f"Total param dict: {param_only_dict}")
-    logging.info(f"Found optional params: {commom_optional_params}")
-
-    if commom_required_params != required_params:
-        missing_params = [x for x in required_params if x not in event]
-        return param_only_dict, missing_params
-
-    return param_only_dict, False
-
-
-def standardize_event(event):
-    if "queryStringParameters" in event:
-        event.update(event["queryStringParameters"])
-    elif "query" in event:
-        event.update(event["query"])
-
-    result_dict = {
-        k.title().strip().replace(" ", "_"):(False if v == "false" else v)
-        for (k, v) in event.items()
-    }
-    return result_dict
-
-
-def package_response(message, status_code, **kwargs):
-    return {
-        "statusCode": status_code if status_code else "200",
-        "body": json.dumps({"data": message}),
-        "headers": {"Content-Type": "application/json"},
-    }
