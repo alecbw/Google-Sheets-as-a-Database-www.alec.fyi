@@ -1,5 +1,5 @@
 # Related article
-https://www.alec.fyi/setup-email-sending-for-anything.html
+https://www.alec.fyi/set-up-google-sheets-apis-and-treat-sheets-like-a-database.html
 
 # Using this
 
