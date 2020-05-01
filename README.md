@@ -7,7 +7,7 @@ Go through the above article and set up Google Sheets API auth. You'll get a pri
 
 Set them as environment variables
 ```
-export GSHEETS_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMII"
+export GSHEETS_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\netcetcetc"
 export GSHEETS_CLIENT_EMAIL=foo@bar.co
 ```
 
@@ -36,7 +36,7 @@ You can test the each Lambda locally (be aware the write will change your GSheet
 ```
 sls invoke local -f gsheet-read -d '{"Gsheet":"1tgTWvAKqX-qOABGtdAZIeJpjOEDro2iDGMS4O8z1fFA", "Tab":"Sheet1"}'
 
-sls invoke local -f gsheet-write -d '{"Gsheet":"1tgTWvAKqX-qOABGtdAZIeJpjOEDro2iDGMS4O8z1fFA", "Tab":"Sheet1","Type":"Overwrite", "Data":[{"col1":"hello","col2":world},{"col1":232,"col2":"mixed type columns are OK"}]}'
+sls invoke local -f gsheet-write -d '{"Gsheet":"GSpread Testing Sheet", "Tab":"Sheet1","Type":"Overwrite", "Data":[{"col1":"hello","col2":world},{"col1":232,"col2":"mixed type columns are OK"}]}'
 
 # to use the sync, you'll need to set the GSheet ID and Tag as env vars
 export GSHEET_ID=44charIDorTheNameItself
