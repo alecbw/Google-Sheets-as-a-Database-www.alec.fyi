@@ -1,23 +1,49 @@
 # Related article
 https://www.alec.fyi/set-up-google-sheets-apis-and-treat-sheets-like-a-database.html
 
+# Setup
+
+Go through the above article and set up Google Sheets API auth. You'll get a private key and a client email.
+
+Set them as environment variables
+```
+export GSHEETS_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\netcetcetc"
+export GSHEETS_CLIENT_EMAIL=foo@bar.co
+```
+
+
 # Using this
 
 
-This repo uses the serverless.com Infrastructure-as-code platform (which itself wraps AWS CloudFormation).
+This repo contains a serverless.yml infrastructure-as-code file, which deploys 3 Lambdas
 
-To create a CloudFormation Stack (and also subsequently update it), use:
+* A GSheet Read Lambda (`gsheet_read_handler`) 
+* A GSheet Write Lambda (`gsheet_write_handler`)
+* A GSheet -> S3 data sync cron service (`s3_gsheets_sync_handler`)
+
+and a S3 bucket:
+ 
+* `gsheet-backup-bucket-${env:AWS_ACCOUNT_ID}`
+
+Deploys are managed through a CloudFormation Stack (called `gsheet-utilities`)
+
+To create the CloudFormation Stack (and also subsequently update it), use:
 ``` 
 sls deploy
 ```
 
-It will be called `s3-sync-cron` (you can edit this in the serverless.yml)
-
-You can test the Lambda locally (be aware it does send an actual email) with:
-
+You can test the each Lambda locally (be aware the write will change your GSheet):
 ```
-TODO
+sls invoke local -f gsheet-read -d '{"Gsheet":"1tgTWvAKqX-qOABGtdAZIeJpjOEDro2iDGMS4O8z1fFA", "Tab":"Sheet1"}'
+
+sls invoke local -f gsheet-write -d '{"Gsheet":"GSpread Testing Sheet", "Tab":"Sheet1","Type":"Overwrite", "Data":[{"col1":"hello","col2":world},{"col1":232,"col2":"mixed type columns are OK"}]}'
+
+# to use the sync, you'll need to set the GSheet ID and Tag as env vars
+export GSHEET_ID=44charIDorTheNameItself
+export GSHEET_TAB=Sheet2
+sls invoke local -f s3-sync
 ```
+All the resources fit easily in the AWS Free Tier and should have no ongoing costs (presuming you stay in the Free Tier, particularly on S3 storage).
 
 To take down the CloudFormation Stack and associated Lambdas and S3, use:
 ```
