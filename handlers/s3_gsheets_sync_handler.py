@@ -1,62 +1,35 @@
+from utils.util import invoke_lambda
 
 import os
 import logging
 import json
-from gspread.models import Cell
 import pandas as pd
-
-# Note: the .clear() (overwrite and combine) will freak people out if they are using it during
+import boto3
 
 ############################################################################################
 
 
 def lambda_handler(event, context):
-    param_dict, missing_params = validate_params(event,
-        required_params=["Data", "Gsheet", "Tab", "Type"],
-        optional_params=["Resize", "Drop_Empty_Rows", "Drop_Empty_Columns", "Primary_Key", "Maintain_Column_Order"]
+
+    tab_data, status = invoke_lambda(
+        {
+            "Gsheet": os.environ["GSHEET_ID"],
+            "Tab": os.environ["GSHEET_TAB"],
+            "Drop_Empty_Rows": True,
+            "Drop_Empty_Columns": True,
+            "Source":"Lambda: S3 Sync"
+        },
+        "s3-sync-cron-prod-gsheet-read",
+        "RequestResponse"
     )
-    if missing_params:
-        return package_response(f"Missing required params {missing_params}", 422)
+    logging.info(f"Status code of data fetch from GSheet is {status}")
+    if status not in [200, 202]:
+        return
 
-    return package_response(f"{param_dict['Type']} successful", 200)
+    s3_object = boto3.resource("s3").Object(
+        f"gsheet-backup-bucket-{os.environ['AWS_ACCOUNT_ID']}-1",
+        f"AutoSync GSheet: {os.environ['GSHEET_ID']}.csv"
+    )
+    output = s3_object.put(Body=(bytes(json.dumps(tab_data).encode("UTF-8"))))
+    logging.info(f"Status code of S3 Write is {output['ResponseMetadata']['HTTPStatusCode']}")
 
-
-
-######################## Standard Lambda Helpers ################################################
-
-
-def validate_params(event, required_params, **kwargs):
-    event = standardize_event(event)
-    commom_required_params = list(set(event).intersection(required_params))
-    commom_optional_params = list(set(event).intersection(kwargs.get("optional_params", [])))
-
-    param_only_dict = {k: v for k, v in event.items() if k in required_params + kwargs.get("optional_params", [])}
-    logging.info(f"Total param dict: {param_only_dict}")
-    logging.info(f"Found optional params: {commom_optional_params}")
-
-    if commom_required_params != required_params:
-        missing_params = [x for x in required_params if x not in event]
-        return param_only_dict, missing_params
-
-    return param_only_dict, False
-
-
-def standardize_event(event):
-    if "queryStringParameters" in event:
-        event.update(event["queryStringParameters"])
-    elif "query" in event:
-        event.update(event["query"])
-
-    result_dict = {
-        k.title().strip().replace(" ", "_"):(False if v == "false" else v)
-        for (k, v) in event.items()
-    }
-    return result_dict
-
-
-def package_response(message, status_code, **kwargs):
-    return {
-        "statusCode": status_code if status_code else "200",
-        "body": json.dumps({"data": message}),
-        "headers": {"Content-Type": "application/json"},
-    }

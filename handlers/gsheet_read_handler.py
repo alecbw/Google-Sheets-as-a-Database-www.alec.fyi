@@ -1,5 +1,5 @@
-from utility.util import package_response, validate_params
-from utility.util_gspread import open_gsheet, get_gsheet_tab
+from utils.util import package_response, validate_params
+from utils.util_gspread import open_gsheet, get_gsheet_tab
 
 import os
 import logging

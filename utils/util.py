@@ -9,10 +9,10 @@ logger.setLevel(logging.INFO)
 
 def validate_params(event, required_params, **kwargs):
     event = standardize_event(event)
-    commom_required_params = get_list_overlap(event, required_params)
-    commom_optional_params = get_list_overlap(event, kwargs.get("optional_params", []))
+    commom_required_params = list(set(event).intersection(required_params))
+    commom_optional_params = list(set(event).intersection(kwargs.get("optional_params", [])))
 
-    param_only_dict = {k:v for k, v in event.items() if k in required_params+kwargs.get("optional_params", [])}
+    param_only_dict = {k: v for k, v in event.items() if k in required_params + kwargs.get("optional_params", [])}
     logging.info(f"Total param dict: {param_only_dict}")
     logging.info(f"Found optional params: {commom_optional_params}")
 
@@ -24,27 +24,23 @@ def validate_params(event, required_params, **kwargs):
 
 
 def standardize_event(event):
-    if event.get("body"):  # POST, synchronous API Gateawy
-        body_dict = {x[0]:x[1] for x in [x.split("=") for x in event["body"].split("&")]}
-        event = {**event, **body_dict}
-    elif event.get("queryStringParameters"):  # GET, synchronous API Gateway
+    if "queryStringParameters" in event:
         event.update(event["queryStringParameters"])
-    elif event.get("query"):  # GET, async API Gateway
+    elif "query" in event:
         event.update(event["query"])
 
-    return standardize_dict(event)
+    result_dict = {
+        k.title().strip().replace(" ", "_"):(False if v == "false" else v)
+        for (k, v) in event.items()
+    }
+    return result_dict
 
 
 def package_response(message, status_code, **kwargs):
-    if kwargs.get("log"):
-        logging.info(message)
-    elif kwargs.get("warn"):
-        logging.warning(message)
-
     return {
-        'statusCode': status_code if status_code else '200',
-        'body': json.dumps({'data': message}),
-        'headers': {'Content-Type': 'application/json'}
+        "statusCode": status_code if status_code else "200",
+        "body": json.dumps({"data": message}),
+        "headers": {"Content-Type": "application/json"},
     }
 
 

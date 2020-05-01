@@ -12,6 +12,10 @@ provider:
   timeout: 10
   tags:
     deployment: serverless.com
+  environment:
+    GSHEETS_CLIENT_EMAIL: ${env:GSHEETS_CLIENT_EMAIL}
+    GSHEETS_PRIVATE_KEY: ${env:GSHEETS_PRIVATE_KEY}
+    AWS_ACCOUNT_ID: ${env:AWS_ACCOUNT_ID}
 
   iamRoleStatements:
     - Effect: Allow
@@ -27,19 +31,33 @@ provider:
         - s3:ListBucket
         - s3:GetBucketLocation
       Resource:
-        - arn:aws:s3:::gsheet-backup-bucket-${env:AWS_ACCOUNT_ID}/*
+        - arn:aws:s3:::gsheet-backup-bucket-${env:AWS_ACCOUNT_ID}-1/*
 
+# These are the 3 Lambdas
 functions:
   s3-sync:
-    handler: handlers.s3_gsheets_sync_handler.lambda_handler
+    handler: handlers/s3_gsheets_sync_handler.lambda_handler
+    environment:
+      GSHEET_ID: ${env:GSHEET_ID}
+      GSHEET_TAB: ${env:GSHEET_TAB}
     events:
       - schedule: cron(0 18 ? * SUN *) # Sun at 11 am PST (18 UTC -7 correction)
+    layers:
+      - arn:aws:lambda:us-west-1:052077176879:layer:Pandas-Numpy:7
+      - arn:aws:lambda:us-west-1:052077176879:layer:Google-Auth:4
   gsheet-read:
-    handler: handlers.gsheet_read_handler.lambda_handler
+    handler: handlers/gsheet_read_handler.lambda_handler
+    layers:
+      - arn:aws:lambda:us-west-1:052077176879:layer:Pandas-Numpy:7
+      - arn:aws:lambda:us-west-1:052077176879:layer:Google-Auth:4
   gsheet-write:
-    handler: handlers.gsheet_write_handler.lambda_handler
+    handler: handlers/gsheet_write_handler.lambda_handler
+    layers:
+      - arn:aws:lambda:us-west-1:052077176879:layer:Pandas-Numpy:7
+      - arn:aws:lambda:us-west-1:052077176879:layer:Google-Auth:4
 
 
+# This creates the S3 Bucket
 resources:
   Resources:
     GSheetBackupBucket:
@@ -53,7 +71,6 @@ resources:
             - GET
             - PUT
             - POST
-            - HEAD
             AllowedOrigins:
             - "*"
             AllowedHeaders:

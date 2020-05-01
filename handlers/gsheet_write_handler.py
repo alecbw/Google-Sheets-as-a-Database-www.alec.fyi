@@ -1,5 +1,5 @@
-from util.util import package_response, validate_params
-from util.util_gspread import open_gsheet, get_gsheet_tab, create_gsheet_worksheet
+from utils.util import package_response, validate_params
+from utils.util_gspread import open_gsheet, get_gsheet_tab, create_gsheet_worksheet
 
 from itertools import chain, zip_longest
 import os
